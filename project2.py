@@ -27,7 +27,7 @@ def pyr_build(img):
     h = img.shape[0]
     min_dimension = min(w, h)
     i = 0
-    while min_dimension > 16:
+    while min_dimension > 8:
         new_img = cv2.pyrDown(G[i])
         G.append(new_img)
         new_img_up = cv2.pyrUp(new_img, dstsize = (w, h))
@@ -54,8 +54,8 @@ def pyr_reconstruct(L):
         h = L[i-1].shape[0]
         r_up = cv2.pyrUp(R[n-i], dstsize = (w, h))
         r_up_32 = numpy.array(r_up, dtype = 'float32')
-        l_32 = numpy.array(L[i-1], dtype = 'float32')
-        new_r = r_up_32 + l_32
+        #l_32 = numpy.array(L[i-1], dtype = 'float32')
+        new_r = r_up_32 + L[i-1]
         R.append(new_r)
         i -= 1
 
@@ -72,9 +72,10 @@ original = cv2.imread(filename)
 
 cv2.namedWindow('original')
 cv2.imshow('original', original)
-print(original)
+#print(original)
 
 lp = pyr_build(original)
+
 #counter = 0
 #for item in lp:
 #    cv2.imshow('pyramid', 0.5 + 0.5*(item / numpy.abs(item).max()))
@@ -86,7 +87,7 @@ lp = pyr_build(original)
 convert = pyr_reconstruct(lp)
 convert_clip = numpy.clip(convert, 0, 255)
 convert_8 = numpy.array(convert_clip, dtype = 'uint8')
-print(convert_8)
+#print(convert_8)
 cv2.imshow('convert', convert_8)
 
 while fixKeyCode(cv2.waitKey(15)) < 0:
