@@ -22,7 +22,7 @@ def fixKeyCode(code):
 def pyr_build(img):
     G = []
     L = []
-    G.append(img)
+    G.append(img.astype('float32'))
     w = img.shape[1]
     h = img.shape[0]
     min_dimension = min(w, h)
@@ -31,23 +31,21 @@ def pyr_build(img):
         new_img = cv2.pyrDown(G[i])
         G.append(new_img)
         new_img_up = cv2.pyrUp(new_img, dstsize = (w, h))
-        G_32 = numpy.array(G[i], dtype = 'float32')
-        new_img_up_32 = numpy.array(new_img_up, dtype = 'float32')
 
-        result = G_32 - new_img_up_32
+        result = G[i] - new_img_up
         L.append(result)
         w = new_img.shape[1]
         h = new_img.shape[0]
         min_dimension = min(w, h)
         i += 1
 
+    L[-1] = G[-2]
     return L
 
 def pyr_reconstruct(L):
     n = len(L)-1
     R = []
-    new_l = 127 + 127 * (L[n] / numpy.abs(L[n]).max())
-    R.append(new_l)
+    R.append(L[n])
     i = n
     while i > 0:
         w = L[i-1].shape[1]
@@ -123,9 +121,6 @@ if sys.argv[1] == 'pyramid':
     convert = pyr_reconstruct(lp)
     convert_clip = numpy.clip(convert, 0, 255)
     convert_8 = numpy.array(convert_clip, dtype = 'uint8')
-    print(convert)
-    print(convert_8)
-    print(original)
     cv2.imshow('convert', convert_8)
 
 elif sys.argv[1] == 'blend':
@@ -197,7 +192,6 @@ elif sys.argv[1] == 'hybrid':
     I_8 = numpy.array(I_clip, dtype = 'uint8')
     cv2.namedWindow('hybrid')
     cv2.imshow('hybrid', I_8)
-
 
 
 else:
