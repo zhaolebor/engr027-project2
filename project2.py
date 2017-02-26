@@ -14,6 +14,7 @@ from __future__ import print_function
 import cv2
 import numpy
 import sys
+import cvk2
 
 ########################################################################
 def fixKeyCode(code):
@@ -110,6 +111,30 @@ def pretty(images):
 
     return output
 
+# pick points function from cvk2 library
+def pickPoints(window, image, filename, xcoord=0):
+
+    cv2.namedWindow(window)
+    cv2.imshow(window, image)
+    cv2.moveWindow(window, xcoord, 0)
+
+    w = cvk2.MultiPointWidget()
+
+    if w.load(filename):
+        print('loaded points from {}'.format(filename))
+    else:
+        print('could not load points from {}'.format(filename))
+
+    ok = w.start(window, image)
+
+    if not ok:
+        print('user canceled instead of picking points')
+        sys.exit(1)
+
+    w.save(filename)
+
+    return w.points
+
 ########################################################################
 # pyramid functionality
 if sys.argv[1] == 'pyramid':
@@ -152,24 +177,56 @@ elif sys.argv[1] == 'blend':
     width = A.shape[1]
     height = A.shape[0]
 
-    # prompt user for parameters of the alpha mask
     print('Image A has width '+str(width)+', height '+str(height))
-    cx = int(raw_input('Enter the x-coord of the mask(-1 for default: center of the image): '))
-    cy = int(raw_input('Enter the y-coord of the mask(-1 for default: center of the image): '))
-    ellipse_width = int(raw_input('Enter the half-width of the ellipse(-1 for default: 1/4 of the image width): '))
-    ellipse_height = int(raw_input('Enter the half-height of the ellipse(-1 for default: 1/4 of the image height): '))
+    while 1:
+         mode = raw_input('Enter "1" to draw an ellipse as the mask, enter "2" to choose the parameters of the ellipse: ')
+         if mode == '1' or mode == '2':
+             break
+
+    if mode == '1':
+        datafile = 'blend.txt'
+        print('Please pick the four vertices of the ellipse in the order of top, right, bottom, left by right clicking the image.')
+        points = pickPoints('A', A, datafile)
+        print('got points =\n', points)
+
+        if len(points) != 4:
+            print('Invalid number of points!')
+            sys.exit(1)
+        top = points[0][0]
+        right = points[1][0]
+        bottom = points[2][0]
+        left = points[3][0]
+        mean = (top+right+bottom+left)/4
+        cx = int(mean[0])
+        cy = int(mean[1])
+        ellipse_width = int(max(cx-left[0], right[0]-cx))
+        ellipse_height = int(max(cy-top[1], bottom[1]-cy))
+    else:
+        cv2.namedWindow('A')
+        cv2.imshow('A', A)
+        cv2.namedWindow('B')
+        cv2.imshow('B', B)
+        while fixKeyCode(cv2.waitKey(15)) < 0:
+            pass
+
+        # prompt user for parameters of the alpha mask
+        cx = int(raw_input('Enter the x-coord of the mask(-1 for default: center of the image): '))
+        cy = int(raw_input('Enter the y-coord of the mask(-1 for default: center of the image): '))
+        ellipse_width = int(raw_input('Enter the half-width of the ellipse(-1 for default: 1/4 of the image width): '))
+        ellipse_height = int(raw_input('Enter the half-height of the ellipse(-1 for default: 1/4 of the image height): '))
+
+        if cx == -1:
+            cx = width/2
+        if cy == -1:
+            cy = height/2
+        if ellipse_width == -1:
+            ellipse_width = width/4
+        if ellipse_height == -1:
+            ellipse_height = height/4
+
     angle = int(raw_input('Enter the angle of the ellipse: '))
     sigma = int(raw_input('Enter the sigma of the Gaussian blur: '))
     ksize = int(raw_input('Enter the size of the Gaussian kernel: '))
-
-    if cx == -1:
-        cx = width/2
-    if cy == -1:
-        cy = height/2
-    if ellipse_width == -1:
-        ellipse_width = width/4
-    if ellipse_height == -1:
-        ellipse_height = height/4
 
     # generate alpha mask based on the specified parameters
     mask = numpy.zeros((height, width), dtype=numpy.uint8)
@@ -177,13 +234,8 @@ elif sys.argv[1] == 'blend':
     mask_blurred = cv2.GaussianBlur(mask, (ksize,ksize), sigma)
     alpha = mask.astype(numpy.float32) / 255.0
 
-    cv2.namedWindow('A')
-    cv2.imshow('A', A)
-    cv2.namedWindow('B')
-    cv2.imshow('B', B)
-
-    #cv2.namedWindow('alpha')
-    #cv2.imshow('alpha', alpha)
+    cv2.namedWindow('alpha')
+    cv2.imshow('alpha', alpha)
 
     # directly alpha blend the two images
     blend = alpha_blend(A, B, alpha)
@@ -239,7 +291,6 @@ elif sys.argv[1] == 'hybrid':
     cv2.namedWindow('hybrid')
     cv2.imshow('hybrid', I_8)
     cv2.imwrite('result/hybrid.jpg', I_8)
-
 
 else:
     print('usage: {} pyramid IMAGE1'.format(sys.argv[0]))
