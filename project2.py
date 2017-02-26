@@ -95,6 +95,20 @@ def align(A, B):
         new_B = B
     return new_B
 
+# function to generate a nice horizontal layout of a pyramid
+def pretty(images):
+    width = sum(image.shape[1] for image in images)
+    height = max(image.shape[0] for image in images)
+    output = numpy.zeros((height,width,3))
+
+    y = 0
+    for image in images:
+        image = 0.5 + 0.5*(image / numpy.abs(image).max())
+        h,w,d = image.shape
+        output[0:h,y:y+w] = image
+        y += w
+
+    return output
 
 ########################################################################
 # pyramid functionality
@@ -110,20 +124,17 @@ if sys.argv[1] == 'pyramid':
 
     lp = pyr_build(original)
 
-    # display each layer of the pyramid
-    counter = 0
-    for item in lp:
-        cv2.imshow('pyramid', 0.5 + 0.5*(item / numpy.abs(item).max()))
-        cv2.imwrite('pyramid'+str(counter)+'.jpg', item)
-        counter += 1
-        while fixKeyCode(cv2.waitKey(15)) < 0:
-            pass
+    # display the pyramid
+    output = pretty(lp)
+    cv2.imshow('pyramid', output)
+    cv2.imwrite('result/pyramid.jpg', output)
 
     # reconstruct the original image using the pyramid generated above
     convert = pyr_reconstruct(lp)
     convert_clip = numpy.clip(convert, 0, 255)
     convert_8 = numpy.array(convert_clip, dtype = 'uint8')
     cv2.imshow('convert', convert_8)
+    cv2.imwrite('result/convert.jpg', convert_8)
 
 # blend functionality
 elif sys.argv[1] == 'blend':
@@ -142,10 +153,11 @@ elif sys.argv[1] == 'blend':
     height = A.shape[0]
 
     # prompt user for parameters of the alpha mask
+    print('Image A has width '+str(width)+', height '+str(height))
     cx = int(raw_input('Enter the x-coord of the mask(-1 for default: center of the image): '))
     cy = int(raw_input('Enter the y-coord of the mask(-1 for default: center of the image): '))
-    ellipse_width = int(raw_input('Enter the width of the ellipse(-1 for default: 1/4 of the image width): '))
-    ellipse_height = int(raw_input('Enter the height of the ellipse(-1 for default: 1/4 of the image height): '))
+    ellipse_width = int(raw_input('Enter the half-width of the ellipse(-1 for default: 1/4 of the image width): '))
+    ellipse_height = int(raw_input('Enter the half-height of the ellipse(-1 for default: 1/4 of the image height): '))
     angle = int(raw_input('Enter the angle of the ellipse: '))
     sigma = int(raw_input('Enter the sigma of the Gaussian blur: '))
     ksize = int(raw_input('Enter the size of the Gaussian kernel: '))
@@ -179,7 +191,7 @@ elif sys.argv[1] == 'blend':
     blend_8 = numpy.array(blend_clip, dtype = 'uint8')
     cv2.namedWindow('blend')
     cv2.imshow('blend', blend_8)
-    cv2.imwrite('blend.jpg', blend_8)
+    cv2.imwrite('result/blend.jpg', blend_8)
 
     # pyramid alpha blend the two images
     pyramid_blend = LP_alpha_blend(A, B, alpha)
@@ -187,7 +199,7 @@ elif sys.argv[1] == 'blend':
     pyramid_blend_8 = numpy.array(pyramid_blend_clip, dtype = 'uint8')
     cv2.namedWindow('pyramid blend')
     cv2.imshow('pyramid blend', pyramid_blend_8)
-    cv2.imwrite('pyramid_blend.jpg', pyramid_blend_8)
+    cv2.imwrite('result/pyramid_blend.jpg', pyramid_blend_8)
 
 # hybrid functionality
 elif sys.argv[1] == 'hybrid':
@@ -226,7 +238,7 @@ elif sys.argv[1] == 'hybrid':
     cv2.imshow('B', B)
     cv2.namedWindow('hybrid')
     cv2.imshow('hybrid', I_8)
-    cv2.imwrite('hybrid.jpg', I_8)
+    cv2.imwrite('result/hybrid.jpg', I_8)
 
 
 else:
