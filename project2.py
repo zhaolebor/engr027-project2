@@ -135,6 +135,10 @@ def pickPoints(window, image, filename, xcoord=0):
 
     return w.points
 
+# Helper function to calculate distance between two points
+def distance(p0, p1):
+    return numpy.sqrt(numpy.square(p0[0] - p1[0]) + numpy.square(p0[1] - p1[1]))
+
 ########################################################################
 # pyramid functionality
 if sys.argv[1] == 'pyramid':
@@ -177,12 +181,13 @@ elif sys.argv[1] == 'blend':
     width = A.shape[1]
     height = A.shape[0]
 
+    # ask the user if they want to pick points on the image to specify the mask or enter values for the parameters of the mask
     print('Image A has width '+str(width)+', height '+str(height))
     while 1:
-         mode = raw_input('Enter "1" to draw an ellipse as the mask, enter "2" to choose the parameters of the ellipse: ')
+         mode = raw_input('Enter "1" to pick points to generate the mask, enter "2" to manually enter the parameters of the mask: ')
          if mode == '1' or mode == '2':
              break
-
+    # use the pickPoints function from cvk2 library to get four vertices of the mask
     if mode == '1':
         datafile = 'blend.txt'
         print('Please pick the four vertices of the ellipse in the order of top, right, bottom, left by right clicking the image.')
@@ -199,8 +204,16 @@ elif sys.argv[1] == 'blend':
         mean = (top+right+bottom+left)/4
         cx = int(mean[0])
         cy = int(mean[1])
-        ellipse_width = int(max(cx-left[0], right[0]-cx))
-        ellipse_height = int(max(cy-top[1], bottom[1]-cy))
+        ellipse_width = int(max(distance(mean, left), distance(mean, right)))
+        ellipse_height = int(max(distance(mean, top), distance(mean, bottom)))
+        angle_rad = numpy.arccos((mean[1]-top[1])/distance(mean, top))
+        if top[0]-mean[0]>0:
+            angle = angle_rad/numpy.pi*180
+        else:
+            angle = -angle_rad/numpy.pi*180
+        print(angle)
+
+    # prompt user to enter the parameters of the ellipse
     else:
         cv2.namedWindow('A')
         cv2.imshow('A', A)
@@ -214,6 +227,7 @@ elif sys.argv[1] == 'blend':
         cy = int(raw_input('Enter the y-coord of the mask(-1 for default: center of the image): '))
         ellipse_width = int(raw_input('Enter the half-width of the ellipse(-1 for default: 1/4 of the image width): '))
         ellipse_height = int(raw_input('Enter the half-height of the ellipse(-1 for default: 1/4 of the image height): '))
+        angle = int(raw_input('Enter the angle of the ellipse: '))
 
         if cx == -1:
             cx = width/2
@@ -224,7 +238,6 @@ elif sys.argv[1] == 'blend':
         if ellipse_height == -1:
             ellipse_height = height/4
 
-    angle = int(raw_input('Enter the angle of the ellipse: '))
     sigma = int(raw_input('Enter the sigma of the Gaussian blur: '))
     ksize = int(raw_input('Enter the size of the Gaussian kernel: '))
 
