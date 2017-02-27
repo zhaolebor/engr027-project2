@@ -93,6 +93,8 @@ def align(A, B):
     #if w_a != w_b or h_a != h_b:
     #    B = cv2.resize(B, dsize = (w_a, h_a), interpolation = cv2.INTER_AREA)
 
+    # prompt user to choose 3 points to align the two images
+    print('Please choose 3 points to perform affine transformation. Points on the contour of the face work better.')
     pointsA = pickPoints('Image A', A, 'a.txt')
     print('got pointsA =\n', pointsA)
 
@@ -139,7 +141,7 @@ def pickPoints(window, image, filename, xcoord=0):
         print('user canceled instead of picking points')
         sys.exit(1)
 
-    w.save(filename)
+    #w.save(filename)
 
     return w.points
 
@@ -189,8 +191,6 @@ elif sys.argv[1] == 'blend':
 
     A, B = align(A, B)
 
-    cv2.namedWindow('A')
-    cv2.imshow('A', A)
     cv2.namedWindow('B')
     cv2.imshow('B', B)
     while fixKeyCode(cv2.waitKey(15)) < 0:
@@ -212,6 +212,9 @@ elif sys.argv[1] == 'blend':
         points = pickPoints('A', A, datafile)
         print('got points =\n', points)
 
+        # generate the center of the mask by averaging the 4 points
+        # generate the width and height of the mask by taking the greater distance between center and top/bottom, left/right
+        # generate the angle by averaging the angles of center-top line and center-bottom line
         if len(points) != 4:
             print('Invalid number of points!')
             sys.exit(1)
@@ -295,7 +298,7 @@ elif sys.argv[1] == 'hybrid':
     A = cv2.imread(filename1)
     B = cv2.imread(filename2)
 
-    B = align(A, B)
+    A,B = align(A, B)
 
     # tested parameters that worked well
     k_a = 0.8
