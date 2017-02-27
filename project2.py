@@ -90,11 +90,19 @@ def align(A, B):
     h_a = A.shape[0]
     w_b = B.shape[1]
     h_b = B.shape[0]
-    if w_a != w_b or h_a != h_b:
-        new_B = cv2.resize(B, dsize = (w_a, h_a), interpolation = cv2.INTER_AREA)
-    else:
-        new_B = B
-    return new_B
+    #if w_a != w_b or h_a != h_b:
+    #    B = cv2.resize(B, dsize = (w_a, h_a), interpolation = cv2.INTER_AREA)
+
+    pointsA = pickPoints('Image A', A, 'a.txt')
+    print('got pointsA =\n', pointsA)
+
+    pointsB = pickPoints('Image B', B, 'b.txt', xcoord=A.shape[1])
+    print('got pointsB =\n', pointsB)
+
+    M = cv2.getAffineTransform(pointsB,pointsA)
+    B = cv2.warpAffine(B,M,(w_a,h_a))
+
+    return A,B
 
 # function to generate a nice horizontal layout of a pyramid
 def pretty(images):
@@ -179,7 +187,14 @@ elif sys.argv[1] == 'blend':
     A = cv2.imread(filename1)
     B = cv2.imread(filename2)
 
-    B = align(A, B)
+    A, B = align(A, B)
+
+    cv2.namedWindow('A')
+    cv2.imshow('A', A)
+    cv2.namedWindow('B')
+    cv2.imshow('B', B)
+    while fixKeyCode(cv2.waitKey(15)) < 0:
+        pass
 
     width = A.shape[1]
     height = A.shape[0]
@@ -247,10 +262,11 @@ elif sys.argv[1] == 'blend':
     mask = numpy.zeros((height, width), dtype=numpy.uint8)
     cv2.ellipse(mask, (cx, cy), (ellipse_width, ellipse_height), angle, 0, 360, (255, 255, 255), -1, cv2.LINE_AA)
     mask_blurred = cv2.GaussianBlur(mask, (ksize,ksize), sigma)
-    alpha = mask.astype(numpy.float32) / 255.0
+    alpha = mask_blurred.astype(numpy.float32) / 255.0
 
     cv2.namedWindow('alpha')
     cv2.imshow('alpha', alpha)
+    cv2.imwrite('result/mask.jpg', alpha*255)
 
     # directly alpha blend the two images
     blend = alpha_blend(A, B, alpha)
