@@ -156,6 +156,9 @@ if sys.argv[1] == 'pyramid':
     # display the pyramid
     output = pretty(lp)
     cv2.imshow('pyramid', output)
+    # Since imwrite does not take floating point image, convert to [0,255]
+    output = output*255
+    output = output.astype(numpy.uint8)
     cv2.imwrite('result/pyramid.jpg', output)
 
     # reconstruct the original image using the pyramid generated above
@@ -206,12 +209,11 @@ elif sys.argv[1] == 'blend':
         cy = int(mean[1])
         ellipse_width = int(max(distance(mean, left), distance(mean, right)))
         ellipse_height = int(max(distance(mean, top), distance(mean, bottom)))
-        angle_rad = numpy.arccos((mean[1]-top[1])/distance(mean, top))
-        if top[0]-mean[0]>0:
+        angle_rad = numpy.arccos((bottom[1]-top[1])/distance(bottom, top))
+        if top[0]-bottom[0]>0:
             angle = angle_rad/numpy.pi*180
         else:
             angle = -angle_rad/numpy.pi*180
-        print(angle)
 
     # prompt user to enter the parameters of the ellipse
     else:
